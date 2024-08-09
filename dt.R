@@ -1,0 +1,143 @@
+
+install.packages("party")
+library(party)  #Decision Trees
+
+
+setwd("D:/new project in r/decision tree")
+bank_additional<-read.csv("BankData.csv")
+bank <- bank_additional
+
+
+str(bank)
+#------------------------------------------------------------------------------------------
+
+
+bank$job        <- as.factor(bank$job)
+bank$marital    <- as.factor(bank$marital)
+bank$education  <- as.factor(bank$education)
+bank$default    <- as.factor(bank$default)
+bank$housing    <- as.factor(bank$housing)
+bank$loan       <- as.factor(bank$loan)
+bank$contact    <- as.factor(bank$contact)
+bank$month      <- as.factor(bank$month)
+bank$day_of_week<- as.factor(bank$day_of_week)
+bank$poutcome   <- as.factor(bank$poutcome)
+bank$y          <- as.factor(bank$y)
+#------------------------------------------------------------------------------------------
+
+
+#Identify factor levels with only few counts and convert to unknown
+bank$default[bank$default == "yes"] <- "unknown"
+bank$education[bank$education == "illeterate"] <- "unknown"
+
+#Check if any of the attributes has NULL Values
+#If yes replace by mean or median
+table(is.na(bank))
+
+
+
+str(bank)
+#######################################################################################
+
+set.seed(10)
+bank$random <- runif(nrow(bank),min=0,max=nrow(bank))
+#------------------------------------------------------------------------------------------
+
+
+#Folds are to be generated randomly
+bank$fold   <- ifelse(bank$random <= quantile(bank$random,0.25),1,
+                      ifelse((bank$random > quantile(bank$random,0.25) & bank$random < quantile(bank$random,0.5)),2,
+                             ifelse((bank$random > quantile(bank$random,0.5) & bank$random < quantile(bank$random,0.75)),3,4)))
+#------------------------------------------------------------------------------------------
+
+
+#  create testing folds
+
+testfold1  <- bank[bank$fold==1, ]                  
+testfold2  <- bank[bank$fold==2, ] 
+testfold3  <- bank[bank$fold==3, ]                  
+testfold4  <- bank[bank$fold==4, ]
+#------------------------------------------------------------------------------------------
+
+
+#  Create training folds
+
+trainfold1  <- bank[bank$fold !=1, ]                  
+trainfold2  <- bank[bank$fold !=2, ] 
+trainfold3  <- bank[bank$fold !=3, ]                  
+trainfold4  <- bank[bank$fold !=4, ]
+#------------------------------------------------------------------------------------------
+ #Evaluate Model#
+
+treemodela <- ctree(y ~ age + job + marital + education + default + housing + loan + contact + month + day_of_week + duration + campaign + pdays + previous + poutcome + emp.var.rate + cons.price.idx + cons.conf.idx + euribor3m + nr.employed, data=trainfold1)
+treemodelb <- ctree(y ~ age + job + marital + education + default + housing + loan + contact + month + day_of_week + duration + campaign + pdays + previous + poutcome + emp.var.rate + cons.price.idx + cons.conf.idx + euribor3m + nr.employed, data=trainfold2)
+treemodelc <- ctree(y ~ age + job + marital + education + default + housing + loan + contact + month + day_of_week + duration + campaign + pdays + previous + poutcome + emp.var.rate + cons.price.idx + cons.conf.idx + euribor3m + nr.employed, data=trainfold3)
+treemodeld <- ctree(y ~ age + job + marital + education + default + housing + loan + contact + month + day_of_week + duration + campaign + pdays + previous + poutcome + emp.var.rate + cons.price.idx + cons.conf.idx + euribor3m + nr.employed, data=trainfold4)
+#------------------------------------------------------------------------------------------
+
+
+testfold1$treepred <- predict(treemodela,newdata=testfold1,type="response")
+testfold2$treepred <- predict(treemodelb,newdata=testfold2,type="response")
+testfold3$treepred <- predict(treemodelc,newdata=testfold3,type="response")
+testfold4$treepred <- predict(treemodeld,newdata=testfold4,type="response")
+
+
+testfold        <- rbind(testfold1,testfold2,testfold3,testfold4)
+
+
+#generate confusion matrix
+tmeasuresfold1 <- table(pred=testfold1$treepred, actual=testfold1$y)
+tmeasuresfold2 <- table(pred=testfold2$treepred, actual=testfold2$y)
+tmeasuresfold3 <- table(pred=testfold3$treepred, actual=testfold3$y)
+tmeasuresfold4 <- table(pred=testfold4$treepred, actual=testfold4$y)
+#------------------------------------------------------------------------------------------
+
+
+#Decision Tree - Confusion matrix measures
+#Test Fold 1
+taccuracyfold1    <- (tmeasuresfold1[1,1] + tmeasuresfold1[2,2])/sum(tmeasuresfold1) # TP+FP / TP+TN+FP+FN 
+
+trecallfold1      <-  tmeasuresfold1[2,2]/(tmeasuresfold1[1,2]+tmeasuresfold1[2,2])  # TP/TP+FN also known as sensitivity 
+
+tprecisionfold1   <-  tmeasuresfold1[2,2]/(tmeasuresfold1[2,1]+tmeasuresfold1[2,2])  # TP/TP+FP
+#------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------
+
+tspecificityfold1 <-  tmeasuresfold1[1,1]/(tmeasuresfold1[1,1]+tmeasuresfold1[2,1])  # TN/TN+FP
+#------------------------------------------------------------------------------------------
+
+
+#Test Fold 2
+taccuracyfold2    <- (tmeasuresfold2[1,1] + tmeasuresfold2[2,2])/sum(tmeasuresfold2) # TP+FP / TP+TN+FP+FN 
+trecallfold2      <-  tmeasuresfold2[2,2]/(tmeasuresfold2[1,2]+tmeasuresfold2[2,2])  # TP/TP+FN also known as sensitivity 
+tprecisionfold2   <-  tmeasuresfold2[2,2]/(tmeasuresfold2[2,1]+tmeasuresfold2[2,2])  # TP/TP+FP
+tspecificityfold2 <-  tmeasuresfold2[1,1]/(tmeasuresfold2[1,1]+tmeasuresfold2[2,1])  # TN/TN+FP
+
+#Test Fold 3
+taccuracyfold3    <- (tmeasuresfold3[1,1] + tmeasuresfold3[2,2])/sum(tmeasuresfold3) # TP+FP / TP+TN+FP+FN 
+trecallfold3      <-  tmeasuresfold3[2,2]/(tmeasuresfold3[1,2]+tmeasuresfold3[2,2])  # TP/TP+FN also known as sensitivity 
+tprecisionfold3   <-  tmeasuresfold3[2,2]/(tmeasuresfold3[2,1]+tmeasuresfold3[2,2])  # TP/TP+FP
+tspecificityfold3 <-  tmeasuresfold3[1,1]/(tmeasuresfold3[1,1]+tmeasuresfold3[2,1])  # TN/TN+FP
+
+#Test Fold 4
+taccuracyfold4    <- (tmeasuresfold4[1,1] + tmeasuresfold4[2,2])/sum(tmeasuresfold4) # TP+FP / TP+TN+FP+FN 
+trecallfold4      <-  tmeasuresfold4[2,2]/(tmeasuresfold4[1,2]+tmeasuresfold4[2,2])  # TP/TP+FN also known as sensitivity 
+tprecisionfold4   <-  tmeasuresfold4[2,2]/(tmeasuresfold4[2,1]+tmeasuresfold4[2,2])  # TP/TP+FP
+tspecificityfold4 <-  tmeasuresfold4[1,1]/(tmeasuresfold4[1,1]+tmeasuresfold4[2,1])  # TN/TN+FP
+#------------------------------------------------------------------------------------------
+#Interpretation:
+
+
+
+
+accuracy        <- c(taccuracyfold1,taccuracyfold2,taccuracyfold3,taccuracyfold4)
+recall          <- c(trecallfold1, trecallfold2, trecallfold3, trecallfold4)
+precision       <- c(tprecisionfold1,tprecisionfold2,tprecisionfold3,tprecisionfold4)
+specificity     <- c(tspecificityfold1,tspecificityfold2,tspecificityfold3,tspecificityfold4)
+technique       <- c("decisiontree","decisiontree","decisiontree","decisiontree") 
+fold_index      <- c("fold1","fold2","fold3","fold4")
+
+treetable <- data.frame(technique,fold_index,accuracy,recall,precision,specificity)
+
+
+
